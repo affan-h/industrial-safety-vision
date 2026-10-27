@@ -1,0 +1,35 @@
+# Danger-zone alert configuration. Each rule cites the SOP clause it enforces,
+# so every alert can be traced back to the plant's own procedure.
+
+model:
+  weights: ../01-ppe-detector/weights/ppe_yolo11n.pt   # trained in Project 1
+  imgsz: 640
+  conf: 0.35
+  # model class name -> role. Roles: person, helmet, head (a bare head).
+  # Names missing from the model are skipped; without helmet/head classes the
+  # helmet rule is turned off automatically (e.g. with the COCO yolo11n.pt).
+  classes:
+    person: person
+    helmet: helmet
+    head: head
+
+tracker: bytetrack.yaml   # Ultralytics built-in ByteTrack
+
+zones:
+  # Polygon points are fractions of frame width/height (0-1), so the zone
+  # survives a change of resolution. Draw your own with: python pick_zone.py --source <video>
+  - name: Zone A - crane bay
+    sop: "SOP 7.1: No personnel to remain in the crane bay while the crane is operating"
+    max_dwell_s: 3
+    polygon: [[0.35, 0.55], [0.75, 0.55], [0.85, 0.98], [0.25, 0.98]]
+
+helmet_rule:
+  enabled: true
+  sop: "SOP 4.2: Safety helmet mandatory on the shop floor at all times"
+  # Bare head must be seen in at least k of the last n frames before alerting.
+  k: 8
+  n: 12
+
+alerts:
+  cooldown_s: 15      # max one alert per worker per rule in this window
+  exit_grace_s: 0.5   # leaving the zone for less than this doesn't reset the dwell timer

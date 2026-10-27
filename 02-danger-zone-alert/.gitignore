@@ -1,0 +1,5 @@
+output/
+videos/
+weights/
+__pycache__/
+*.pt

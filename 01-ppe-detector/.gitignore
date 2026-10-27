@@ -1,0 +1,6 @@
+data/
+runs/
+__pycache__/
+*.pt
+!weights/ppe_yolo11n.pt
+*.cache
