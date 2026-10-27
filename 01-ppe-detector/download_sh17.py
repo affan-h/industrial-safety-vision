@@ -9,6 +9,8 @@ a small local sample to smoke-test the pipeline:
 
 import argparse
 import io
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
@@ -26,8 +28,15 @@ def fetch(remote_path: str, out_dir: Path) -> Path:
         return dst
     dst.parent.mkdir(parents=True, exist_ok=True)
     url = BASE_URL + urllib.parse.quote(remote_path, safe="")
-    with urllib.request.urlopen(url, timeout=120) as r:
-        data = r.read()
+    for attempt in range(6):
+        try:
+            with urllib.request.urlopen(url, timeout=120) as r:
+                data = r.read()
+            break
+        except urllib.error.HTTPError as e:
+            if e.code != 429 or attempt == 5:
+                raise
+            time.sleep(2 ** attempt)  # rate limited: back off and retry
     if data[:4] == b"PK\x03\x04":  # Kaggle zips larger single-file downloads
         with zipfile.ZipFile(io.BytesIO(data)) as zf:
             data = zf.read(zf.namelist()[0])

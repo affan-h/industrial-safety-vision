@@ -62,7 +62,7 @@ def load_gt(label_path: Path, w: int, h: int) -> tuple[np.ndarray, np.ndarray]:
 
 
 def size_bin(box: np.ndarray, w: int, h: int) -> str:
-    frac = (box[2] - box[0]) * (box[3] - box[1]) / (w * h)
+    frac = min(max((box[2] - box[0]) * (box[3] - box[1]) / (w * h), 0.0), 1.0)  # labels can overshoot the frame
     return next(name for name, lo, hi in SIZE_BINS if lo <= frac < hi)
 
 

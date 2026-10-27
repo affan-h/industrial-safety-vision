@@ -6,17 +6,18 @@ Watches a camera feed and raises an alert, tied to a specific SOP clause, when a
 
 Each alert produces a snapshot and a CSV log line (`time, worker ID, rule, zone, SOP clause, reason`), plus an annotated video. It reuses the PPE detector trained in [`../01-ppe-detector`](../01-ppe-detector).
 
-<!-- Replace with your own clip: python make_gif.py --video output/<clip>/annotated.mp4 --start 2 --seconds 6 -->
 ![demo](docs/demo.gif)
+
+*Worker #23 stays in the crane-bay zone past the 3 s limit and turns red. Source video: "Building construction Moira Close Broadwater Farm Haringey 2025 13", Wikimedia Commons, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/); annotations added. This GIF is shared under the same licence.*
 
 ## How it works
 
 ```
-video / RTSP ─► YOLO detector (person, helmet, bare head) ─► ByteTrack (stable worker IDs)
+video / RTSP ─► YOLO detector (person, head, helmet)      ─► ByteTrack (stable worker IDs)
                                                                    │
                        ┌───────────────────────────────────────────┤
                        ▼                                           ▼
-     zone rule: foot point inside polygon?            helmet rule: helmet or bare head
+     zone rule: foot point inside polygon?            helmet rule: head with no helmet on it
      dwell timer per worker > limit?                  inside the person's head region?
                        │                              confirmed in k of last n frames?
                        └──────────────┬────────────────────────────┘
@@ -31,8 +32,9 @@ video / RTSP ─► YOLO detector (person, helmet, bare head) ─► ByteTrack (
 | **Zone test uses the person's feet** (bottom-centre of the box), not the box centre | From an elevated camera, a person's box centre can lie over a floor zone while they're standing outside it |
 | **Dwell time limit**, not instant alerts | Walking past a zone edge isn't a violation. Staying in a crane bay is |
 | **Exit grace period** (0.5 s) | A box flickering across the zone edge, or briefly lost, shouldn't reset the timer. Only being *seen outside* for longer does |
-| **Helmet status has three states**: helmet / bare head / *unknown* | Back turned, head occluded or too far away means "can't tell", which must not become an alert, or supervisors drown in false alarms |
-| **k-of-n confirmation** (default 8 of 12 frames) | A single-frame "bare head" misdetection doesn't trigger anything. `--no-filter` turns it off so the effect can be measured |
+| **Helmet status has three states**: helmet / head with no helmet / *unknown* | Back turned, head occluded or too far away means "can't tell", which must not become an alert, or supervisors drown in false alarms |
+| **Asymmetric confidence**: persons and heads need ≥ 0.35, helmets only ≥ 0.15 | The `head` class covers every head, so "no helmet" really means "no helmet detected". A missed helmet becomes a false alarm, while a weakly detected one costs nothing. On the test clip this cut false no-helmet alerts from 9 to 5 |
+| **k-of-n confirmation** (default 8 of 12 frames) | A single-frame "no helmet" misdetection doesn't trigger anything. `--no-filter` turns it off so the effect can be measured |
 | **Cooldown** per worker per rule | One incident = one alert, not 30 per second |
 | **Rules in `config.yaml`, each citing an SOP clause** | Safety teams can change zones and limits without touching code, and every alert is traceable to a procedure |
 | **Zone polygons in 0–1 coordinates** | The same config works if the stream resolution changes |
@@ -40,18 +42,21 @@ video / RTSP ─► YOLO detector (person, helmet, bare head) ─► ByteTrack (
 
 ## Results
 
-> ⚠️ Fill in from your own clip after recording it (see "Measure it" below). Don't invent numbers.
+**Test clip** (15 s, 854×480, construction site, a hand-held camera rather than real CCTV), with the Project 1 model:
 
-| run | alerts | correct | false alarms | missed | precision | recall |
-|---|---|---|---|---|---|---|
-| with k-of-n filter | – | – | – | – | – | – |
-| `--no-filter` | – | – | – | – | – | – |
+| setting | zone-dwell alerts | "no helmet" alerts |
+|---|---|---|
+| helmet threshold = person threshold (0.35) | 4 | 9 |
+| **asymmetric helmet threshold (0.15)**, the default | 2 | **5** |
 
-**Speed** (printed at the end of every run): a smoke test on a 2015 dual-core laptop CPU, 854×480 video, COCO `yolo11n`, ran at **≈4 FPS** (≈235 ms detect+track, ≈11 ms everything else per frame). Detection dominates, so a GPU or an exported ONNX/OpenVINO model is where speed-ups come from, not the rule logic.
+In the frames checked, every worker in this clip wears a hard hat, so **all "no helmet" alerts here are false alarms**. Lowering the helmet threshold removed about half of them; the rest come from missed helmets (Project 1 helmet recall is only 0.55) and from merged boxes, where two crouching workers are detected as one person. Zone-dwell counts also changed, because the tracker now receives extra low-confidence detections. Without ground truth for this clip, it's not yet measured whether that's better or worse; recording a labelled clip (below) is the next step.
 
-**Failure modes seen in testing** (construction-site clip, CC BY-SA 4.0, Wikimedia Commons):
-- Workers **behind mesh fencing or crouching were missed** by the generic COCO model at confidence 0.35.
-- The visible worker's **track ID switched** mid-clip (#3 → #10), and the dwell timer restarts with a new ID. Handling this properly needs re-identification, or zone-level occupancy timing instead of per-ID timing.
+**Speed:** on a 2015 dual-core laptop CPU, ≈4 FPS (≈240 ms detect+track, ≈12 ms rules, drawing and I/O per frame). Detection dominates, so a GPU or an exported ONNX/OpenVINO model is where speed-ups come from, not the rule logic.
+
+**Failure modes seen:**
+- **Missed helmets → false "no helmet" alerts.** This is the main weakness, and it comes straight from the detector's helmet recall. Fixes: more helmet training data, higher input resolution for distant workers, or tracking helmet status per worker over a longer window.
+- **Workers behind mesh fencing or crouching** were detected unreliably, and two close workers sometimes merged into one person box.
+- **Track ID switches** restart the dwell timer (with the stock COCO model one worker went #3 → #10 and never reached the limit). Handling this properly needs re-identification, or zone-level occupancy timing instead of per-ID timing.
 
 ## Run it
 

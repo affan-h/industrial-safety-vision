@@ -4,8 +4,9 @@
 model:
   weights: ../01-ppe-detector/weights/ppe_yolo11n.pt   # trained in Project 1
   imgsz: 640
-  conf: 0.35
-  # model class name -> role. Roles: person, helmet, head (a bare head).
+  conf: 0.35          # persons and heads must be at least this confident
+  helmet_conf: 0.15   # but weak helmet evidence is enough to suppress a no-helmet alert
+  # model class name -> role. Roles: person, helmet, head (any head; "no helmet" = a head with no helmet on it).
   # Names missing from the model are skipped; without helmet/head classes the
   # helmet rule is turned off automatically (e.g. with the COCO yolo11n.pt).
   classes:

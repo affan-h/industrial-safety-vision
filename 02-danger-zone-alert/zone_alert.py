@@ -2,7 +2,7 @@
 
 Rules:
   - zone_dwell: a worker stays inside a danger zone longer than the allowed time
-  - no_helmet:  a worker's bare head is seen in k of the last n frames
+  - no_helmet:  a worker's head is seen with no helmet on it in k of the last n frames
 
 Outputs (in --out): annotated video, events.csv, one snapshot per alert.
 
@@ -86,6 +86,7 @@ def main():
     ap.add_argument("--device", default=None)
     ap.add_argument("--max-frames", type=int, default=0)
     ap.add_argument("--no-filter", action="store_true", help="disable k-of-n smoothing (for comparison)")
+    ap.add_argument("--helmet-conf", type=float, help="override model.helmet_conf (e.g. 0.35 to compare)")
     ap.add_argument("--show", action="store_true", help="display a live window")
     args = ap.parse_args()
 
@@ -116,6 +117,10 @@ def main():
     log.writerow(["time_s", "frame", "track_id", "rule", "zone", "sop", "detail", "snapshot"])
 
     keep = sorted(roles["person"] | roles["helmet"] | roles["head"])
+    # Asymmetric thresholds: weak helmet evidence is enough to suppress a no-helmet alarm,
+    # because a missed helmet turns straight into a false alert.
+    conf = mcfg.get("conf", 0.35)
+    helmet_conf = args.helmet_conf if args.helmet_conf is not None else mcfg.get("helmet_conf", conf)
     n_events, frame_idx, t_model, t_rest = 0, 0, 0.0, 0.0
     start = time.monotonic()
     while True:
@@ -126,16 +131,17 @@ def main():
 
         t0 = time.perf_counter()
         res = model.track(frame, persist=True, tracker=cfg.get("tracker", "bytetrack.yaml"), classes=keep,
-                          conf=mcfg.get("conf", 0.35), imgsz=mcfg.get("imgsz", 640), device=args.device,
+                          conf=min(conf, helmet_conf), imgsz=mcfg.get("imgsz", 640), device=args.device,
                           verbose=False)[0]
         t1 = time.perf_counter()
 
         b = res.boxes
-        xyxy, cls = b.xyxy.cpu().numpy(), b.cls.cpu().numpy().astype(int)
+        xyxy, cls, scores = b.xyxy.cpu().numpy(), b.cls.cpu().numpy().astype(int), b.conf.cpu().numpy()
         ids = b.id.cpu().numpy().astype(int) if b.id is not None else np.full(len(cls), -1)
-        people = {int(i): tuple(bx) for bx, c, i in zip(xyxy, cls, ids) if c in roles["person"] and i >= 0}
-        helmets = [tuple(bx) for bx, c in zip(xyxy, cls) if c in roles["helmet"]]
-        heads = [tuple(bx) for bx, c in zip(xyxy, cls) if c in roles["head"]]
+        people = {int(i): tuple(bx) for bx, c, s, i in zip(xyxy, cls, scores, ids)
+                  if c in roles["person"] and s >= conf and i >= 0}
+        helmets = [tuple(bx) for bx, c, s in zip(xyxy, cls, scores) if c in roles["helmet"] and s >= helmet_conf]
+        heads = [tuple(bx) for bx, c, s in zip(xyxy, cls, scores) if c in roles["head"] and s >= conf]
 
         events, states = rules.update(frame_idx, t, people, helmets, heads)
 

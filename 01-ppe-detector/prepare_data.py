@@ -1,6 +1,6 @@
 """Turn raw SH17 into a 4-class YOLO dataset: person, head, helmet, safety-vest.
 
-- Keeps only the 4 classes (a bare "head" is what a missing helmet looks like).
+- Keeps only the 4 classes ("head" covers every head, helmeted or not).
 - Splits the official train list 90/10 into train/val; the official val list
   becomes a held-out TEST set that is never used for training or model selection.
 - Downscales images (SH17 originals are up to 8192 px) to save disk and I/O.

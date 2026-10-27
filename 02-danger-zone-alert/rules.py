@@ -38,7 +38,10 @@ def _center_in(box, region) -> bool:
 
 
 def helmet_status(person_box, helmet_boxes, head_boxes):
-    """True = helmet seen on this person, False = bare head seen, None = can't tell.
+    """True = helmet seen on this person, False = head seen but no helmet on it, None = can't tell.
+
+    The head class covers every head, helmeted or not (in SH17 81% of helmets sit
+    on a labelled head), so a head only counts as bare when no helmet is found.
 
     "Can't tell" (back turned, head occluded, too far away) is NOT treated as a
     violation; alerting on it would flood supervisors with false alarms.
@@ -162,6 +165,6 @@ class SafetyRules:
                     st.violations.append("no_helmet")
                     if self.cooldown.ready((tid, "no_helmet", ""), t):
                         events.append(Event(t, frame, tid, "no_helmet", st.zone or "", self.helmet_sop,
-                                            f"bare head in {self.no_helmet.k}+ of last {self.no_helmet.n} frames"))
+                                            f"no helmet on head in {self.no_helmet.k}+ of last {self.no_helmet.n} frames"))
             states[tid] = st
         return events, states
