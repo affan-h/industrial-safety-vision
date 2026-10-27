@@ -41,7 +41,7 @@ Fine-tunes a pretrained **YOLO11n** detector to find **people, bare heads, helme
 
 ## Run it
 
-**Train on a free GPU (recommended):** open `colab_train.ipynb` in Google Colab, select a T4 GPU and run all cells (about 1.5–2 h). It downloads SH17, trains, evaluates, runs the robustness test and the failure gallery, then zips `results/` and `weights/` for download.
+**Train on a free GPU (recommended):** open `colab_train.ipynb` in Google Colab (T4 GPU) or Kaggle (GPU + the SH17 dataset attached as input) and run all cells (about 1.5–2 h). It downloads SH17, trains, evaluates, runs the robustness test and the failure gallery, then zips `results/` and `weights/` for download.
 
 **Locally** (a CPU is enough for a smoke test, not for real training):
 ```bash
