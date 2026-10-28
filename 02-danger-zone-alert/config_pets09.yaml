@@ -1,0 +1,32 @@
+# Configuration for the PETS09-S2L1 benchmark evaluation (fixed, elevated CCTV-style camera).
+# Same settings as config.yaml; only the zone is drawn for this scene. evaluate_mot.py reads
+# the zone, dwell limit and exit grace from this file to compute the ground-truth incidents.
+
+model:
+  weights: ../01-ppe-detector/weights/ppe_yolo11n.pt
+  imgsz: 640
+  conf: 0.35
+  helmet_conf: 0.15
+  classes:
+    person: person
+    helmet: helmet
+    head: head
+
+tracker: bytetrack.yaml
+
+zones:
+  # The road junction on the right of the frame, where people both cross and linger.
+  - name: Zone B - vehicle junction
+    sop: "SOP 6.3: Pedestrians must not remain in the vehicle junction"
+    max_dwell_s: 5
+    polygon: [[0.625, 0.3125], [1.0, 0.2604], [1.0, 0.5729], [0.7292, 0.5729]]
+
+helmet_rule:
+  enabled: true
+  sop: "SOP 4.2: Safety helmet mandatory on the shop floor at all times"
+  k: 8
+  n: 12
+
+alerts:
+  cooldown_s: 15
+  exit_grace_s: 0.5

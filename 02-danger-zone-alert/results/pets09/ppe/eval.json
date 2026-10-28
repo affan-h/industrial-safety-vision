@@ -1,0 +1,40 @@
+{
+  "incidents": 11,
+  "alerts": 15,
+  "correct": 10,
+  "repeat": 3,
+  "false_alarm": 2,
+  "missed": 1,
+  "precision": 0.867,
+  "recall": 0.909,
+  "median_latency_s": 0.0,
+  "ids_per_person": 3.32,
+  "helmet_status_frames": {
+    "no_helmet": 1952,
+    "helmet": 1,
+    "unknown": 2531
+  },
+  "no_helmet_alerts": 39,
+  "annotated_people": 19,
+  "false_alarms_detail": [
+    {
+      "time_s": 36.29,
+      "track_id": "833",
+      "person": 1
+    },
+    {
+      "time_s": 103.71,
+      "track_id": "2413",
+      "person": 1
+    }
+  ],
+  "missed_detail": [
+    {
+      "person": 1,
+      "start_s": 58.285714285714285,
+      "end_s": 62.714285714285715
+    }
+  ],
+  "no_helmet_people_alerted": 16,
+  "no_helmet_alerts_on_nobody": 0
+}

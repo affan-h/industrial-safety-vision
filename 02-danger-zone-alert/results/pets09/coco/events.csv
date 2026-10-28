@@ -1,0 +1,15 @@
+time_s,frame,track_id,rule,zone,sop,detail,snapshot,x1,y1,x2,y2
+14.29,100,15,zone_dwell,Zone B - vehicle junction,SOP 6.3: Pedestrians must not remain in the vehicle junction,in zone for 5.0s (limit 5s),0014.29s_zone_dwell_id15.jpg,590.0,153.3,616.9,235.1
+18.14,127,6,zone_dwell,Zone B - vehicle junction,SOP 6.3: Pedestrians must not remain in the vehicle junction,in zone for 5.0s (limit 5s),0018.14s_zone_dwell_id6.jpg,605.4,128.2,627.6,188.2
+19.14,134,5,zone_dwell,Zone B - vehicle junction,SOP 6.3: Pedestrians must not remain in the vehicle junction,in zone for 5.0s (limit 5s),0019.14s_zone_dwell_id5.jpg,598.2,118.9,622.3,180.4
+33.14,232,6,zone_dwell,Zone B - vehicle junction,SOP 6.3: Pedestrians must not remain in the vehicle junction,in zone for 7.4s (limit 5s),0033.14s_zone_dwell_id6.jpg,669.8,123.9,689.5,175.9
+35.71,250,5,zone_dwell,Zone B - vehicle junction,SOP 6.3: Pedestrians must not remain in the vehicle junction,in zone for 5.1s (limit 5s),0035.71s_zone_dwell_id5.jpg,632.9,121.6,657.9,184.7
+36.29,254,57,zone_dwell,Zone B - vehicle junction,SOP 6.3: Pedestrians must not remain in the vehicle junction,in zone for 5.0s (limit 5s),0036.29s_zone_dwell_id57.jpg,522.2,185.1,550.6,257.7
+48.14,337,6,zone_dwell,Zone B - vehicle junction,SOP 6.3: Pedestrians must not remain in the vehicle junction,in zone for 22.4s (limit 5s),0048.14s_zone_dwell_id6.jpg,662.5,211.5,690.3,291.8
+50.71,355,5,zone_dwell,Zone B - vehicle junction,SOP 6.3: Pedestrians must not remain in the vehicle junction,in zone for 20.1s (limit 5s),0050.71s_zone_dwell_id5.jpg,684.6,228.8,716.8,326.0
+56.00,392,15,zone_dwell,Zone B - vehicle junction,SOP 6.3: Pedestrians must not remain in the vehicle junction,in zone for 5.0s (limit 5s),0056.00s_zone_dwell_id15.jpg,734.3,225.1,768.0,326.7
+77.43,542,98,zone_dwell,Zone B - vehicle junction,SOP 6.3: Pedestrians must not remain in the vehicle junction,in zone for 5.0s (limit 5s),0077.43s_zone_dwell_id98.jpg,604.2,178.5,637.7,258.6
+95.14,666,97,zone_dwell,Zone B - vehicle junction,SOP 6.3: Pedestrians must not remain in the vehicle junction,in zone for 5.0s (limit 5s),0095.14s_zone_dwell_id97.jpg,591.9,167.2,621.3,244.8
+103.71,726,130,zone_dwell,Zone B - vehicle junction,SOP 6.3: Pedestrians must not remain in the vehicle junction,in zone for 5.0s (limit 5s),0103.71s_zone_dwell_id130.jpg,524.5,193.5,558.4,281.5
+105.14,736,125,zone_dwell,Zone B - vehicle junction,SOP 6.3: Pedestrians must not remain in the vehicle junction,in zone for 5.0s (limit 5s),0105.14s_zone_dwell_id125.jpg,606.5,116.5,631.5,175.0
+109.71,768,89,zone_dwell,Zone B - vehicle junction,SOP 6.3: Pedestrians must not remain in the vehicle junction,in zone for 5.0s (limit 5s),0109.71s_zone_dwell_id89.jpg,629.0,197.9,661.5,291.9

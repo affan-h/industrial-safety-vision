@@ -4,7 +4,8 @@ Rules:
   - zone_dwell: a worker stays inside a danger zone longer than the allowed time
   - no_helmet:  a worker's head is seen with no helmet on it in k of the last n frames
 
-Outputs (in --out): annotated video, events.csv, one snapshot per alert.
+Outputs (in --out): annotated video, events.csv, one snapshot per alert, and tracks.csv
+(every tracked person in every frame, for offline evaluation).
 
     python zone_alert.py --source videos/demo.mp4
     python zone_alert.py --source videos/demo.mp4 --no-filter   # compare: alert on every raw frame
@@ -25,14 +26,16 @@ from rules import SafetyRules, Zone
 GREEN, ORANGE, RED, WHITE = (60, 180, 75), (0, 165, 255), (40, 40, 230), (255, 255, 255)
 
 
-def load_rules(cfg: dict, w: int, h: int, have_helmet_classes: bool, no_filter: bool) -> SafetyRules:
+def load_rules(cfg: dict, w: int, h: int, have_helmet_classes: bool, no_filter: bool,
+               exit_grace_s: float | None = None) -> SafetyRules:
     zones = [Zone(z["name"], [(x * w, y * h) for x, y in z["polygon"]], z["sop"], float(z["max_dwell_s"]))
              for z in cfg.get("zones", [])]
     hr = cfg.get("helmet_rule", {})
     helmet_sop = hr.get("sop") if hr.get("enabled") and have_helmet_classes else None
     k, n = (1, 1) if no_filter else (hr.get("k", 8), hr.get("n", 12))
     a = cfg.get("alerts", {})
-    return SafetyRules(zones, helmet_sop, k, n, a.get("cooldown_s", 15), a.get("exit_grace_s", 0.5))
+    grace = exit_grace_s if exit_grace_s is not None else a.get("exit_grace_s", 0.5)
+    return SafetyRules(zones, helmet_sop, k, n, a.get("cooldown_s", 15), grace)
 
 
 def role_class_ids(model_names: dict, mapping: dict) -> dict[str, set[int]]:
@@ -87,6 +90,7 @@ def main():
     ap.add_argument("--max-frames", type=int, default=0)
     ap.add_argument("--no-filter", action="store_true", help="disable k-of-n smoothing (for comparison)")
     ap.add_argument("--helmet-conf", type=float, help="override model.helmet_conf (e.g. 0.35 to compare)")
+    ap.add_argument("--exit-grace", type=float, help="override alerts.exit_grace_s (e.g. 0 to compare)")
     ap.add_argument("--show", action="store_true", help="display a live window")
     args = ap.parse_args()
 
@@ -104,7 +108,7 @@ def main():
     fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
     w, h = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    rules = load_rules(cfg, w, h, bool(roles["helmet"] and roles["head"]), args.no_filter)
+    rules = load_rules(cfg, w, h, bool(roles["helmet"] and roles["head"]), args.no_filter, args.exit_grace)
     if rules.helmet_sop is None:
         print("[info] helmet rule off (disabled in config or model lacks helmet/head classes)")
 
@@ -114,7 +118,10 @@ def main():
     writer = cv2.VideoWriter(str(out / "annotated.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
     csv_file = open(out / "events.csv", "w", newline="")
     log = csv.writer(csv_file)
-    log.writerow(["time_s", "frame", "track_id", "rule", "zone", "sop", "detail", "snapshot"])
+    log.writerow(["time_s", "frame", "track_id", "rule", "zone", "sop", "detail", "snapshot", "x1", "y1", "x2", "y2"])
+    tracks_file = open(out / "tracks.csv", "w", newline="")
+    tracks_log = csv.writer(tracks_file)
+    tracks_log.writerow(["frame", "time_s", "track_id", "x1", "y1", "x2", "y2", "zone", "dwell_s", "helmet"])
 
     keep = sorted(roles["person"] | roles["helmet"] | roles["head"])
     # Asymmetric thresholds: weak helmet evidence is enough to suppress a no-helmet alarm,
@@ -148,6 +155,9 @@ def main():
         draw_zones(frame, rules.zones)
         for tid, box in people.items():
             draw_person(frame, tid, box, states[tid])
+            st = states[tid]
+            tracks_log.writerow([frame_idx, f"{t:.3f}", tid, *(f"{v:.1f}" for v in box), st.zone or "",
+                                 f"{st.dwell_s:.2f}", {True: "helmet", False: "no_helmet", None: "unknown"}[st.helmet]])
         n_events += len(events)
         done = frame_idx + 1
         draw_hud(frame, t, len(people), sum(bool(s.violations) for s in states.values()), n_events,
@@ -156,7 +166,8 @@ def main():
         for e in events:
             snap = out / "snapshots" / f"{e.time_s:07.2f}s_{e.rule}_id{e.track_id}.jpg"
             cv2.imwrite(str(snap), frame)
-            log.writerow([f"{e.time_s:.2f}", e.frame, e.track_id, e.rule, e.zone, e.sop, e.detail, snap.name])
+            log.writerow([f"{e.time_s:.2f}", e.frame, e.track_id, e.rule, e.zone, e.sop, e.detail, snap.name,
+                          *(f"{v:.1f}" for v in people[e.track_id])])
             print(f"[ALERT] t={e.time_s:6.1f}s worker #{e.track_id} {e.rule:<10} {e.zone or '-'} | {e.sop} | {e.detail}")
 
         writer.write(frame)
@@ -171,6 +182,7 @@ def main():
     cap.release()
     writer.release()
     csv_file.close()
+    tracks_file.close()
     cv2.destroyAllWindows()
     if frame_idx:
         print(f"\n{frame_idx} frames, {n_events} alerts -> {out}")
