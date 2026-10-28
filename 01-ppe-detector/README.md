@@ -44,7 +44,25 @@ The clean row (0.707) differs slightly from the test table (0.715) because these
 - **"Head" means any head.** In SH17, 81% of labelled helmets sit on a labelled `head` box, so "no helmet" has to be inferred as *a head with no helmet on it*. Since helmet recall is only 0.55, missed helmets become false "no helmet" alerts downstream (see Project 2).
 - **Training hadn't fully plateaued.** Validation mAP was still rising slightly at epoch 50 ([curves](results/training/results.png)), so a longer schedule or a bigger model (YOLO11s) would likely gain a few points.
 
-**Failure gallery:** not generated in the Kaggle run, and the cause isn't confirmed yet. The notebook now stops on any failed step instead of continuing silently. To produce it, run `failure_gallery.py` again where the test images are available (Kaggle/Colab).
+## Where it fails: object size, not just class
+
+Every test prediction matched to the ground truth (IoU ≥ 0.5, confidence ≥ 0.25), with misses split by how much of the image the object covers (small < 1%, medium 1–5%, large > 5%):
+
+| class | small: missed | medium: missed | large: missed |
+|---|---|---|---|
+| person | **62%** (205 / 332) | 22% (67 / 300) | 5% (108 / 2,102) |
+| head | **33%** (294 / 880) | 3% (30 / 1,018) | 3% (17 / 529) |
+| helmet | **54%** (53 / 99) | 11% (5 / 45) | 10% (1 / 10) |
+| safety-vest | **67%** (34 / 51) | 52% (15 / 29) | 6% (1 / 17) |
+
+![The 8 test images with the most errors](results/failures_overview.jpg)
+
+*Green = correct, red = false positive, orange = missed. Full-size images, the 6 best cases and per-image error counts are in [`results/failures/`](results/failures).*
+
+- **Small objects are the main weakness.** Large people are missed 5% of the time, small ones 62%. Most helmets in the test set (99 of 154) are small, which explains a large part of the low helmet recall. Fixed plant cameras are mounted high and see workers small, so this matters more than any single class. Fixes: train and infer at higher resolution (e.g. 1280 px), tile large frames (SAHI-style), or add small-object training data.
+- **The worst images are distant crowds**: a drone shot of a construction crew (all 18 labelled objects missed), workers beside an aircraft, passengers on a ship deck. That is exactly the viewpoint of an elevated CCTV camera.
+- **Some "errors" are label problems.** In one image, 15 of the "missed" people are photos on a laptop screen, while the real person using the laptop counts as a false positive. Dataset noise like this puts a ceiling on measured accuracy and is worth cleaning before chasing more model capacity.
+- **Vests are hard even at medium size** (52% missed). A partly visible hi-vis vest is a small, colour-defined patch, and with only 97 test examples the model hasn't learned it well.
 
 ## Method
 
