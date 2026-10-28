@@ -87,12 +87,13 @@ def main():
 
     cfg = yaml.safe_load(Path(args.data).read_text())
     root, names = Path(cfg["path"]), cfg["names"]
-    images = sorted((root / "images" / "test").glob("*.jpg"))
     model = YOLO(args.weights)
 
     records, missed_by_size, gt_by_size = [], Counter(), Counter()
     fp_by_class, fn_by_class = Counter(), Counter()
-    for res in model.predict([str(p) for p in images], conf=args.conf, imgsz=args.imgsz,
+    # Pass the folder, not a list of paths: Ultralytics loads a list into memory and runs it
+    # as ONE batch (1,620 images -> CUDA out of memory on a 16 GB T4).
+    for res in model.predict(str(root / "images" / "test"), conf=args.conf, imgsz=args.imgsz,
                              device=args.device, stream=True, verbose=False):
         path = Path(res.path)
         h, w = res.orig_shape
